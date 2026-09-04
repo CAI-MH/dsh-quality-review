@@ -1,0 +1,58 @@
+{
+  "name": "dsh-quality-review",
+  "version": "0.1.0",
+  "description": "AI response quality review for DeepSeek Harness: audits each finished assistant turn with an independent reviewer model and steers the agent to fix unreasonable output (up to 2 review rounds).",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "quality",
+    "review",
+    "audit"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-agent": "^0.1.2-alpha.1",
+    "@deepseek-ai/dsh-llm": "^0.1.2-alpha.1",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "file:/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/cordis",
+    "@deepseek-ai/dsh-agent": "file:/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-agent",
+    "@deepseek-ai/dsh-llm": "file:/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-llm",
+    "@deepseek-ai/schemastery": "file:/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/schemastery",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  }
+}
