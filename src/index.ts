@@ -14,9 +14,11 @@
  * turn allows at most `maxRounds` steered follow-ups (default 2), which is
  * the hard loop guard.
  */
+import { join } from 'node:path';
 import Config from './config.js';
 import type { QualityReviewConfig } from './config.js';
 import { Reviewer, renderFixRequest, type LlmStreamLike, type ReviewerRoute } from './reviewer.js';
+import { loadSopKeywords, matchesSop } from './sop.js';
 
 export const name = 'quality-review';
 export const inject = ['llm'];
@@ -47,12 +49,14 @@ interface AgentLike {
 
 interface CordisContextLike {
   llm: LlmStreamLike;
-  logger(tag: string): {
-    info(message: string): void;
-    warn(message: string): void;
-    error(message: string): void;
-  };
   on(event: 'agent/turn-stopping', listener: (payload: { agent: AgentLike; turn: number; signal: AbortSignal }) => unknown): unknown;
+}
+
+/** Plain stdout logger: dsh captures stdout into harness.log, unlike ctx.logger. */
+interface ReviewLogger {
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string): void;
 }
 
 /** Concatenate the visible text blocks of one derived message. */
@@ -132,8 +136,41 @@ function resolveRoute(agent: AgentLike, config: QualityReviewConfig): ReviewerRo
   return { provider, model };
 }
 
+/**
+ * True when the user prompt matches a configured common-task exemption keyword
+ * (case-insensitive substring match). Matching turns are skipped so routine
+ * SOP-style workflows are never audited.
+ */
+function matchesExempt(userPrompt: string, patterns: string[]): boolean {
+  if (!Array.isArray(patterns) || patterns.length === 0) return false;
+  const prompt = userPrompt.trim().toLowerCase();
+  if (prompt === '') return false;
+  return patterns.some((pattern) => {
+    const p = pattern.trim().toLowerCase();
+    return p !== '' && prompt.includes(p);
+  });
+}
+
+/** Default SOP folder under DSH_HOME (falls back to cwd when unset). */
+function defaultSopDir(): string {
+  const home = process.env.DSH_HOME ?? process.cwd();
+  return join(home, 'quality-review', 'sop');
+}
+
+/** Resolve the active SOP folder, or '' when folder exemption is disabled. */
+function resolveSopDir(config: QualityReviewConfig): string {
+  if (!config.sop.enabled) return '';
+  return config.sop.dir !== '' ? config.sop.dir : defaultSopDir();
+}
+
 export function apply(ctx: CordisContextLike, config: QualityReviewConfig): void {
-  const log = ctx.logger('quality-review');
+  // Log through stdout so the ready message and per-turn verdicts are visible
+  // in the harness log (ctx.logger only buffers and never reaches harness.log).
+  const log: ReviewLogger = {
+    info: (message) => console.log(`[quality-review] ${message}`),
+    warn: (message) => console.warn(`[quality-review] ${message}`),
+    error: (message) => console.error(`[quality-review] ${message}`),
+  };
   const ledger = new RoundLedger();
 
   ctx.on('agent/turn-stopping', async ({ agent, turn, signal }) => {
@@ -151,6 +188,17 @@ export function apply(ctx: CordisContextLike, config: QualityReviewConfig): void
     const { userPrompt, assistantReply } = extractReviewMaterial(agent.session);
     if (assistantReply.trim() === '') return;
     if (assistantReply.length < config.minReplyChars && round === 0) return;
+
+    if (matchesExempt(userPrompt, config.exemptPatterns)) {
+      log.info(`agent "${agent.id}" turn ${turn}: skipped review (exempt pattern matched); letting the turn close`);
+      return;
+    }
+
+    const sopDir = resolveSopDir(config);
+    if (sopDir !== '' && matchesSop(userPrompt, loadSopKeywords(sopDir))) {
+      log.info(`agent "${agent.id}" turn ${turn}: skipped review (SOP folder matched); letting the turn close`);
+      return;
+    }
 
     const route = resolveRoute(agent, config);
     if (route === undefined) {

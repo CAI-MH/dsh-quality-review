@@ -34,6 +34,23 @@ export interface QualityReviewConfig {
    * turn worth reviewing — trivially short replies are skipped.
    */
   minReplyChars: number;
+  /**
+   * Common-task exemption keywords: when the user prompt contains any of these
+   * (case-insensitive substring match), the turn is skipped entirely. Use it
+   * to let routine SOP-style tasks through without a review, so the auditor
+   * never nags on a well-understood workflow.
+   */
+  exemptPatterns: string[];
+  /**
+   * SOP folder exemption: a directory the user can keep dropping task files
+   * into. Each file name (extension stripped) becomes an exemption keyword;
+   * a matching turn is skipped. `dir` empty means the default folder under
+   * DSH_HOME.
+   */
+  sop: {
+    enabled: boolean;
+    dir: string;
+  };
 }
 
 const Config: Schema<QualityReviewConfig> = Schema.object({
@@ -72,6 +89,19 @@ const Config: Schema<QualityReviewConfig> = Schema.object({
   minReplyChars: Schema.natural()
     .default(200)
     .description('低于该字符数的简短回复不审核，避免对闲聊式回答过度反应。'),
+  exemptPatterns: Schema.array(Schema.string())
+    .default([])
+    .description('常见任务豁免：用户提问包含任一关键词时跳过审核（用于固定 SOP 的例行任务，避免误伤）。'),
+  sop: Schema.object({
+    enabled: Schema.boolean()
+      .default(true)
+      .description('启用 SOP 文件夹豁免：从文件夹读取文件名作为常见任务关键词，命中即跳过审核。'),
+    dir: Schema.string()
+      .default('')
+      .description('SOP 文件夹路径；留空使用默认目录 DSH_HOME/quality-review/sop。'),
+  })
+    .default({})
+    .description('常见任务 SOP 文件夹豁免。'),
 });
 
 export default Config;

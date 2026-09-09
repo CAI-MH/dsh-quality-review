@@ -33,6 +33,23 @@ export interface QualityReviewConfig {
      * turn worth reviewing — trivially short replies are skipped.
      */
     minReplyChars: number;
+    /**
+     * Common-task exemption keywords: when the user prompt contains any of these
+     * (case-insensitive substring match), the turn is skipped entirely. Use it
+     * to let routine SOP-style tasks through without a review, so the auditor
+     * never nags on a well-understood workflow.
+     */
+    exemptPatterns: string[];
+    /**
+     * SOP folder exemption: a directory the user can keep dropping task files
+     * into. Each file name (extension stripped) becomes an exemption keyword;
+     * a matching turn is skipped. `dir` empty means the default folder under
+     * DSH_HOME.
+     */
+    sop: {
+        enabled: boolean;
+        dir: string;
+    };
 }
 declare const Config: Schema<QualityReviewConfig>;
 export default Config;

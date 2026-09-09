@@ -40,7 +40,35 @@ dsh plugin --profile web add dsh-quality-review
       completeness: true
       logicalConsistency: true
       instructionFollowing: true
+    minReplyChars: 200       # 低于该字符数的简短回复不审核
+    sop:
+      enabled: true          # SOP 文件夹豁免开关(默认开启)
+      dir: ''                # SOP 文件夹路径;留空用默认目录 DSH_HOME/quality-review/sop
+    exemptPatterns:          # 额外静态关键词:命中即跳过审核(可选)
+      - 代码 review
 ```
+
+### 常见任务 SOP 文件夹豁免(sop)
+
+对固定 SOP 的例行任务,审核往往只会带来无意义的打断。插件会读取一个 **SOP 文件夹**,把里面每个**文件名**当作一个常见任务关键词:当用户提问包含某个文件名(大小写不敏感、子串匹配)时,这一轮**直接放行、不做审核**。
+
+默认文件夹是 `DSH_HOME/quality-review/sop`(DSH_HOME 通常是 `~/Library/Application Support/dsh-desktop/harness`)。你只需**往里丢文件**即可生效,无需改配置、无需重启:
+
+```
+quality-review/sop/
+├── 周报.md          # 命中 "帮我写周报" 等提问
+├── 会议纪要.md      # 命中 "整理一下会议纪要"
+└── 日报.txt         # 命中 "今天的日报"
+```
+
+- 文件名(去掉扩展名)即关键词;支持的扩展名:` .md` / `.txt` / `.markdown`。
+- **支持子文件夹**,会递归遍历整个目录树;可按类别建子目录归类,例如 `工作/周报.md`、`生活/旅行计划.md`。
+- 新增/删除/重命名文件后,**下一轮对话立即生效**(每轮重新扫描)。
+- 想换个位置,把 `sop.dir` 配成该目录绝对路径;想整体关闭,设 `sop.enabled: false`。
+
+### 静态关键词豁免(exemptPatterns)
+
+除了文件夹,也可以用 `exemptPatterns` 写死一小批关键词(数组,大小写不敏感、子串匹配),命中即跳过审核。两者取并集,任一命中都放行。
 
 ## 开发
 

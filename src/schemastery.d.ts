@@ -16,6 +16,7 @@ declare module '@deepseek-ai/schemastery' {
     boolean(): Schema<boolean>;
     number(): Schema<number>;
     natural(): Schema<number>;
+    array<T>(inner: Schema<T>): Schema<T[]>;
   }
   const Schema: SchemaStatic;
   export default Schema;
