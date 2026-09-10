@@ -40,7 +40,19 @@ Every field has a safe default, so the bundle row can be inserted with no `confi
       completeness: true
       logicalConsistency: true
       instructionFollowing: true
+    minReplyChars: 200       # skip replies shorter than this
+    sop:
+      enabled: true          # SOP reference-standard switch (default on)
+      dir: ''                # SOP folder; empty uses DSH_HOME/quality-review/sop
+    exemptPatterns:          # extra static keywords: skip review on match (optional)
+      - 代码 review
 ```
+
+### Common-task SOP reference standards (`sop`)
+
+For routine SOP-style tasks, reviewing against generic dimensions is noisy. The plugin reads a **SOP folder** and treats each file *name* (extension stripped) as a match keyword for the related task; when the user prompt matches any name (case-insensitive substring), it loads the content of **every file** in the folder — a SOP may span several files — and injects it into the review prompt as the task's quality standard, adding a "是否符合 SOP 规范" dimension the reviewer checks the answer against. Non-matching turns still use the generic four dimensions.
+
+Default folder: `DSH_HOME/quality-review/sop`. Drop files in and fill them with the task's standard (what a good output must contain / avoid); no config or restart needed — the folder is re-scanned every turn. `exemptPatterns` is separate: a static keyword list that *skips* review on match.
 
 ## Development
 

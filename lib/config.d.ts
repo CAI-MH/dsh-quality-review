@@ -41,10 +41,11 @@ export interface QualityReviewConfig {
      */
     exemptPatterns: string[];
     /**
-     * SOP folder exemption: a directory the user can keep dropping task files
-     * into. Each file name (extension stripped) becomes an exemption keyword;
-     * a matching turn is skipped. `dir` empty means the default folder under
-     * DSH_HOME.
+     * SOP folder reference standards: a directory the user can keep dropping
+     * task standard files into. Each file name (extension stripped) matches a
+     * related task; the matched file's *content* is handed to the reviewer as
+     * the quality standard the answer is checked against. `dir` empty means the
+     * default folder under DSH_HOME.
      */
     sop: {
         enabled: boolean;

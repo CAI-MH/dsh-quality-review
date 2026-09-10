@@ -42,10 +42,11 @@ export interface QualityReviewConfig {
    */
   exemptPatterns: string[];
   /**
-   * SOP folder exemption: a directory the user can keep dropping task files
-   * into. Each file name (extension stripped) becomes an exemption keyword;
-   * a matching turn is skipped. `dir` empty means the default folder under
-   * DSH_HOME.
+   * SOP folder reference standards: a directory the user can keep dropping
+   * task standard files into. Each file name (extension stripped) matches a
+   * related task; the matched file's *content* is handed to the reviewer as
+   * the quality standard the answer is checked against. `dir` empty means the
+   * default folder under DSH_HOME.
    */
   sop: {
     enabled: boolean;
@@ -95,13 +96,13 @@ const Config: Schema<QualityReviewConfig> = Schema.object({
   sop: Schema.object({
     enabled: Schema.boolean()
       .default(true)
-      .description('启用 SOP 文件夹豁免：从文件夹读取文件名作为常见任务关键词，命中即跳过审核。'),
+      .description('启用 SOP 标准参照：从文件夹读取文件名匹配相关任务，把命中文件的内容作为该任务的质量标准注入审核。'),
     dir: Schema.string()
       .default('')
       .description('SOP 文件夹路径；留空使用默认目录 DSH_HOME/quality-review/sop。'),
   })
     .default({})
-    .description('常见任务 SOP 文件夹豁免。'),
+    .description('常见任务 SOP 标准参照。'),
 });
 
 export default Config;

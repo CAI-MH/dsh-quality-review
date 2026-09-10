@@ -18,7 +18,8 @@ import { join } from 'node:path';
 import Config from './config.js';
 import type { QualityReviewConfig } from './config.js';
 import { Reviewer, renderFixRequest, type LlmStreamLike, type ReviewerRoute } from './reviewer.js';
-import { loadSopKeywords, matchesSop } from './sop.js';
+import { loadSopStandards, matchSopStandards } from './sop.js';
+import type { SopStandard } from './sop.js';
 
 export const name = 'quality-review';
 export const inject = ['llm'];
@@ -195,9 +196,22 @@ export function apply(ctx: CordisContextLike, config: QualityReviewConfig): void
     }
 
     const sopDir = resolveSopDir(config);
-    if (sopDir !== '' && matchesSop(userPrompt, loadSopKeywords(sopDir))) {
-      log.info(`agent "${agent.id}" turn ${turn}: skipped review (SOP folder matched); letting the turn close`);
-      return;
+    let sopStandards: SopStandard[] = [];
+    if (sopDir !== '') {
+      const standards = loadSopStandards(sopDir);
+      // 命中任意一个 SOP 文件即判定为「相关任务」；SOP 可能是多个文件共同
+      // 构成一份标准，因此命中后读取文件夹内全部标准文件，而不是只读命中的。
+      const matched = matchSopStandards(userPrompt, standards);
+      if (matched.length > 0) {
+        const emptyNames = standards.filter((standard) => standard.content === '').map((standard) => standard.keyword);
+        if (emptyNames.length > 0) {
+          log.warn(`agent "${agent.id}" turn ${turn}: SOP file(s) with empty content ignored: ${emptyNames.join(', ')}`);
+        }
+        sopStandards = standards.filter((standard) => standard.content !== '');
+        log.info(
+          `agent "${agent.id}" turn ${turn}: SOP matched (${matched.map((standard) => standard.keyword).join(', ')}), loading all ${sopStandards.length} standard file(s)`,
+        );
+      }
     }
 
     const route = resolveRoute(agent, config);
@@ -212,7 +226,7 @@ export function apply(ctx: CordisContextLike, config: QualityReviewConfig): void
     try {
       const reviewer = new Reviewer(ctx.llm, route, config);
       verdict = await reviewer.review(
-        { userPrompt, assistantReply, round: round + 1, maxRounds: config.maxRounds },
+        { userPrompt, assistantReply, round: round + 1, maxRounds: config.maxRounds, sopStandards },
         signal,
       );
     } catch (error) {

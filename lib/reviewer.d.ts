@@ -10,6 +10,7 @@
  * wedges the agent loop.
  */
 import type { QualityReviewConfig } from './config.js';
+import type { SopStandard } from './sop.js';
 export interface ReviewIssue {
     aspect: string;
     problem: string;
@@ -29,6 +30,8 @@ export interface ReviewRequest {
     /** Which review round this is, 1-based; fed to the prompt for context. */
     round: number;
     maxRounds: number;
+    /** SOP standards (all files once a match triggers) used as the reference benchmark. */
+    sopStandards?: SopStandard[];
 }
 export interface LlmStreamLike {
     stream(request: {

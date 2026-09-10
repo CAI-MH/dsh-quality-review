@@ -10,6 +10,8 @@
  * wedges the agent loop.
  */
 import type { QualityReviewConfig } from './config.js';
+import { renderSopReference } from './sop.js';
+import type { SopStandard } from './sop.js';
 
 export interface ReviewIssue {
   aspect: string;
@@ -32,6 +34,8 @@ export interface ReviewRequest {
   /** Which review round this is, 1-based; fed to the prompt for context. */
   round: number;
   maxRounds: number;
+  /** SOP standards (all files once a match triggers) used as the reference benchmark. */
+  sopStandards?: SopStandard[];
 }
 
 export interface LlmStreamLike {
@@ -82,13 +86,23 @@ function enabledAspects(config: QualityReviewConfig): string[] {
 }
 
 export function renderReviewPrompt(request: ReviewRequest, config: QualityReviewConfig): string {
+  const sopStandards = Array.isArray(request.sopStandards)
+    ? request.sopStandards.filter((standard) => standard.content !== '')
+    : [];
+  const hasSop = sopStandards.length > 0;
   const aspects = enabledAspects(config);
+  if (hasSop) {
+    aspects.push('- 是否符合 SOP 规范：回答是否遵守该任务对应的质量标准，有无遗漏、偏离或违反规范要求');
+  }
   const aspectBlock = aspects.length > 0 ? aspects.join('\n') : '- 综合质量：回答是否合理、可信、有用';
+  const sopBlock = hasSop
+    ? `\n【该任务的质量标准（SOP 规范）】\n${renderSopReference(sopStandards)}\n`
+    : '';
   return `请审核以下 AI 助手的回答质量。
 
 【开启的审核维度】
 ${aspectBlock}
-
+${sopBlock}
 【用户的提问】
 ${request.userPrompt.trim() === '' ? '（未能获取原文，请依据回答内容本身判断）' : request.userPrompt}
 
